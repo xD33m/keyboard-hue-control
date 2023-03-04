@@ -9,6 +9,9 @@ hue_ip := "192.168.0.137" ; set the IP address of your Hue bridge
 hue_username := "AbGTyPNFZhAuATZex0GKwJal8KoR9JHIU4htnQWj" ; set your Hue API key
 sendDelay := 100 ; set delay time between requests (in milliseconds)
 
+; Define the context for the hotkeys
+#If GetKeyState("F13", "P")
+
 SC12E::
     brightness := Max(brightness - increment, 0) ; decrease brightness by the increment amount, but don't go below 0%
     ControlHueLight(brightness)
@@ -18,6 +21,9 @@ SC130::
     brightness := Min(brightness + increment, 100) ; increase brightness by the increment amount, but don't go above 100%
     ControlHueLight(brightness)
 return
+
+; End the context definition
+#If
 
 ControlHueLight(brightness) {
     global hue_ip
