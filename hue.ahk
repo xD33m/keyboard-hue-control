@@ -73,15 +73,16 @@ ControlHueLight(brightness, lightId, lastBrightnessVar) {
     global sendDelay
     
     ; Check current state of the light to see if it is on or off
-    stateUrl := "http://" . hue_ip . "/api/" . hue_username . "/lights/" . lightId
+    stateUrl := "http://" . hue_ip . "/api/" . hue_username . "/groups/" . lightId
     httpRequest.Open("GET", stateUrl, false)
     httpRequest.Send()
     lightStateResponse := httpRequest.ResponseText
     
     ; If the light is off, turn it on first
     if (InStr(lightStateResponse, """on"":false")) {
-        ToggleHueLight(lightId, true)
+        ToggleHueLight(lightId, "true")
     }
+
     
     ; convert the brightness level to a scale of 0-254 (the range used by the Hue API)
     hue_brightness := Round((brightness / 100) * 254)
