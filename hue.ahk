@@ -15,6 +15,7 @@ sendDelay := 100 ; set delay time between requests (in milliseconds)
 deckenlampe := 1
 spots := 3
 stehlampe := 2
+enableLogging := false ; toggle logging
 
 #If GetKeyState("F13", "P")
 
@@ -71,6 +72,7 @@ ControlHueLight(brightness, lightId, lastBrightnessVar) {
     global hue_username
     global httpRequest
     global sendDelay
+    global enableLogging
     
     ; Check current state of the light to see if it is on or off
     stateUrl := "http://" . hue_ip . "/api/" . hue_username . "/groups/" . lightId
@@ -89,7 +91,9 @@ ControlHueLight(brightness, lightId, lastBrightnessVar) {
     
     ; check if the brightness level has changed since the last request was sent
     if (hue_brightness != %lastBrightnessVar%) {
-        FileAppend, Brightness set to %brightness%`n, log.txt
+        if (enableLogging) {
+            FileAppend, Brightness set to %brightness%`n, log.txt
+        }
         
         ; construct the URL to set the brightness of your Hue light(s)
         url := "http://" . hue_ip . "/api/" . hue_username . "/groups/" . lightId . "/action"
@@ -113,6 +117,7 @@ ToggleHueLight(lightId, desiredState := "toggle") {
     global hue_ip
     global hue_username
     global httpRequest
+    global enableLogging
 
     ; If a desired state is provided (true or false), use it; otherwise, toggle the current state
     if (desiredState == "true" or desiredState == "false") {
@@ -132,8 +137,9 @@ ToggleHueLight(lightId, desiredState := "toggle") {
 
     ; Construct the JSON payload to set the "on" state of the light
     payload := "{""on"": " . newState . "}"
-    FileAppend, Light %lightId% turned %newState%`n, log.txt
-
+    if (enableLogging) {
+        FileAppend, Light %lightId% turned %newState%`n, log.txt
+    }
     ; The URL should target the "state" resource of an individual light
     url := "http://" . hue_ip . "/api/" . hue_username . "/groups/" . lightId . "/action"
     
