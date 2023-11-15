@@ -1,7 +1,7 @@
 #SingleInstance Force
+#Persistent
 
 httpRequest := ComObjCreate("WinHTTP.WinHttpRequest.5.1")
-#Persistent
 
 ; Configuration
 brightness := 100
@@ -14,8 +14,9 @@ spots := 3
 stehlampe := 2
 enableLogging := true
 
-; Track the last brightness level sent
+; Track the last brightness level sent and light states
 lastBrightness := {deckenlampe: -1, spots: -1, stehlampe: -1}
+lightStates := {deckenlampe: "unknown", spots: "unknown", stehlampe: "unknown"}
 
 ; Keybindings
 #If GetKeyState("F13", "P")
@@ -35,64 +36,45 @@ Alt & F14::ToggleHueLight(spots)
 Alt & F15::ToggleHueLight(stehlampe)
 
 AdjustBrightness(lightId, change) {
-    global brightness
+    global brightness, lightStates
     brightness += change
     brightness := Clamp(brightness, 0, 100)
-    ControlHueLight(brightness, lightId)
+    if (lightStates[lightId] != "false") {
+        ControlHueLight(brightness, lightId)
+    } else {
+        ToggleAndSetBrightness(lightId, brightness)
+    }
 }
 
 ControlHueLight(brightness, lightId) {
-    global sendDelay, enableLogging, lastBrightness
-    EnsureLightOn(lightId)
-    
+    global lastBrightness, enableLogging
     hue_brightness := Round((brightness / 100) * 254)
     if (hue_brightness != lastBrightness[lightId]) {
-        LogIfEnabled("Brightness set to " . brightness, enableLogging)
         payload := "{""bri"": " . hue_brightness . "}"
         SendHueRequest(lightId, payload)
         lastBrightness[lightId] := hue_brightness
     }
 }
 
-EnsureLightOn(lightId) {
-    lightState := GetLightState(lightId)
-    if (lightState == "false") {
-        ToggleHueLight(lightId, "true")
-    }
-}
-
-GetLightState(lightId) {
-    stateUrl := BuildURL(lightId)
-    httpRequest.Open("GET", stateUrl, false)
-    httpRequest.Send()
-    LogIfEnabled("Light " . lightId . " is " . stateUrl, true)
-    return InStr(httpRequest.ResponseText, """on"":true") ? "true" : "false"
+ToggleAndSetBrightness(lightId, brightness) {
+    ToggleHueLight(lightId, "true")
+    ControlHueLight(brightness, lightId)
 }
 
 ToggleHueLight(lightId, desiredState := "toggle") {
-    global enableLogging
-    newState := DetermineNewState(lightId, desiredState)
+    global lightStates
+    newState := desiredState != "toggle" ? desiredState : (lightStates[lightId] == "true" ? "false" : "true")
+    lightStates[lightId] := newState
     payload := "{""on"": " . newState . "}"
-    LogIfEnabled("Light " . lightId . " turned " . newState, enableLogging)
     SendHueRequest(lightId, payload)
-}
-
-DetermineNewState(lightId, desiredState) {
-    return (desiredState == "toggle") ? (GetLightState(lightId) == "true" ? "false" : "true") : desiredState
-}
-
-LogIfEnabled(message, loggingEnabled) {
-    if (loggingEnabled) {
-        FileAppend, %message%`n, log.txt
-    }
+    LogIfEnabled("Light " . lightId . " turned " . newState, enableLogging)
 }
 
 SendHueRequest(lightId, data) {
-    global httpRequest, sendDelay
+    global httpRequest, sendDelay, enableLogging
     url := BuildURL(lightId)
     httpRequest.Open("PUT", url, false)
     httpRequest.Send(data)
-    LogIfEnabled("Request to " . url . " with data " . data . "`nResponse: " . httpRequest.ResponseText . "`n", true)
     Sleep sendDelay
 }
 
@@ -103,4 +85,10 @@ BuildURL(lightId) {
 
 Clamp(value, min, max) {
     return (value < min) ? min : (value > max) ? max : value
+}
+
+LogIfEnabled(message, loggingEnabled) {
+    if (loggingEnabled) {
+        FileAppend, %message%`n, log.txt
+    }
 }
