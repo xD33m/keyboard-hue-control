@@ -1,13 +1,26 @@
 #SingleInstance Force
 #Persistent
 
+ReadEnv(key) {
+    FileRead, content, .env
+    Loop, parse, content, `n, `r
+    {
+        if (A_LoopField != "") {
+            keyValue := StrSplit(A_LoopField, "=")
+            if (keyValue[1] == key)
+                return keyValue[2]
+        }
+    }
+    return ""
+}
+
 httpRequest := ComObjCreate("WinHTTP.WinHttpRequest.5.1")
 
 ; Configuration
 brightness := 100
 increment := 12
 hue_ip := "192.168.0.137"
-hue_username := "Z0xVW0E-aR4ahQvgJ42hA6ndrCb8D7ZVEDWgfcY5"
+hue_username := ReadEnv("HUE_USERNAME")
 sendDelay := 100
 deckenlampe := 1
 spots := 3
